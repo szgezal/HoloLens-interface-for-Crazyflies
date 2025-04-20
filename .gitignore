@@ -1,0 +1,63 @@
+# ========== Unity-specific ==========
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+MemoryCaptures/
+
+# Crashlytics generated file
+crashlytics-build.properties
+
+# Asset meta data should only be ignored when the corresponding asset is also ignored
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.DS_Store
+
+# ========== User-specific ==========
+UserSettings/
+*.user
+*.userprefs
+*.unityproj
+*.suo
+
+# ========== OS-generated ==========
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# ========== IDE-specific ==========
+
+# VS / VS Code
+.vscode/
+*.csproj
+*.sln
+*.sln.*
+*.tmp
+*.bak
+*.orig
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# ========== Build output ==========
+Build/
+Builds/
+*.apk
+*.aab
+*.xcodeproj
+*.xcworkspace
+*.xcuser*
+*.iosbuild/
+
+# ========== Unity Cloud Build ==========
+unitycloud/
