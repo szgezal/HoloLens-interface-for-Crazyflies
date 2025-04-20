@@ -84,16 +84,10 @@ public class ROSControl : MonoBehaviour
 
         optitrackOrigin = new GameObject("OptiTrackOrigin");
 
-        // Only move world objects, not the XR Rig
-        string[] objectsToReposition = { "drone", "gas_station", "BoundaryCube", "Fires", "FireBoundaries", "Trajectory"};
-
-        foreach (string name in objectsToReposition)
+        GameObject[] toMove = GameObject.FindGameObjectsWithTag("Syncable");
+        foreach (GameObject obj in toMove)
         {
-            GameObject obj = GameObject.Find(name);
-            if (obj != null)
-            {
-                obj.transform.SetParent(optitrackOrigin.transform, true);
-            }
+            obj.transform.SetParent(optitrackOrigin.transform, true);
         }
 
         // Create and configure the LineRenderer
@@ -105,7 +99,6 @@ public class ROSControl : MonoBehaviour
         lineRenderer.useWorldSpace = true;
         lineRenderer.startColor = Color.green;
         lineRenderer.endColor = Color.green;
-
     }
 
     private bool originInitialized = false;
@@ -193,6 +186,7 @@ public class ROSControl : MonoBehaviour
         */
 
         //optitrackOrigin.transform.rotation = Quaternion.Inverse(rot_opti);
+;
 
         originInitialized = true;
 
@@ -318,6 +312,7 @@ public class ROSControl : MonoBehaviour
             }
         }
     }
+
 
     private Vector3 CalculateMoveDirection(HandJointPose palmPose)
     {
