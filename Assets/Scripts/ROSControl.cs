@@ -4,11 +4,14 @@ using MixedReality.Toolkit;
 using MixedReality.Toolkit.Subsystems;
 using UnityEngine.XR;
 using Unity.Robotics.ROSTCPConnector;
+using Unity.Robotics.ROSTCPConnector.MessageGeneration;
 using RosMessageTypes.UnityRoboticsDemo;
 using RosMessageTypes.Std;
 using MixedReality.Toolkit.SpatialManipulation;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using System.Collections.Generic;
+using RosMessageTypes.Geometry;
 
 
 public class ROSControl : MonoBehaviour
@@ -32,6 +35,12 @@ public class ROSControl : MonoBehaviour
     private bool isBoundaryActive = true;
 
     ROSConnection ros;
+
+    private List<Vector3> droneTrajectory = new List<Vector3>();
+    private Vector3 lastRecordedPosition;
+    private bool isTrackingTrajectory = false;
+
+    private LineRenderer lineRenderer;
 
     void Start()
     {
@@ -69,14 +78,14 @@ public class ROSControl : MonoBehaviour
         ros.RegisterPublisher<Int32Msg>("control");
         ros.RegisterPublisher<PosRotMsg>("debug");
         ros.RegisterPublisher<PosRotMsg>("hololens_init_success");
+        ros.RegisterPublisher<DroneTrajectoryMsg>("drone_trajectory");
         ros.Subscribe<PosRotMsg>("hololens_init_pose", InitOriginFromROS);
         UpdateControlMode();
 
-        // Coordinate system alignment
         optitrackOrigin = new GameObject("OptiTrackOrigin");
 
         // Only move world objects, not the XR Rig
-        string[] objectsToReposition = { "drone", "gas_station", "BoundaryCube", "Fire", "FireBoundary"};
+        string[] objectsToReposition = { "drone", "gas_station", "BoundaryCube", "Fires", "FireBoundaries", "Trajectory"};
 
         foreach (string name in objectsToReposition)
         {
@@ -86,6 +95,17 @@ public class ROSControl : MonoBehaviour
                 obj.transform.SetParent(optitrackOrigin.transform, true);
             }
         }
+
+        // Create and configure the LineRenderer
+        lineRenderer = gameObject.AddComponent<LineRenderer>();
+        lineRenderer.startWidth = 0.01f;
+        lineRenderer.endWidth = 0.01f;
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        lineRenderer.positionCount = 0;
+        lineRenderer.useWorldSpace = true;
+        lineRenderer.startColor = Color.green;
+        lineRenderer.endColor = Color.green;
+
     }
 
     private bool originInitialized = false;
@@ -173,7 +193,6 @@ public class ROSControl : MonoBehaviour
         */
 
         //optitrackOrigin.transform.rotation = Quaternion.Inverse(rot_opti);
-;
 
         originInitialized = true;
 
@@ -206,6 +225,27 @@ public class ROSControl : MonoBehaviour
 
         // Always send the updated position and orientation
         SendPositionAndOrientation();
+
+        if (isTrackingTrajectory)
+        {
+            TrackDronePosition();
+        }
+
+    }
+
+    private void TrackDronePosition()
+    {
+        Vector3 currentPos = droneTransform.position;
+
+        if (droneTrajectory.Count == 0 || currentPos != lastRecordedPosition)
+        {
+            droneTrajectory.Add(currentPos);
+            lastRecordedPosition = currentPos;
+
+            // Update line renderer
+            lineRenderer.positionCount = droneTrajectory.Count;
+            lineRenderer.SetPosition(droneTrajectory.Count - 1, currentPos);
+        }
     }
 
     public void ToggleControlMode()
@@ -315,11 +355,36 @@ public class ROSControl : MonoBehaviour
         ros.Publish("pos_rot", cubePos);
     }
 
+    private void SendTrajectoryToROS()
+    {
+        PointMsg[] positions = new PointMsg[droneTrajectory.Count];
+
+        for (int i = 0; i < droneTrajectory.Count; i++)
+        {
+            Vector3 pos = droneTrajectory[i];
+            positions[i] = new PointMsg(pos.x, pos.y, pos.z);
+        }
+
+        DroneTrajectoryMsg msg = new DroneTrajectoryMsg
+        {
+            positions = positions
+        };
+
+        ros.Publish("drone_trajectory", msg);
+    }
+
     public void SendTakeoff()
     {
         Int32Msg controlMsg = new Int32Msg(1);
         ros.Publish("control", controlMsg);
         Debug.Log("Takeoff command sent (1)");
+
+        // Start tracking
+        isTrackingTrajectory = true;
+        droneTrajectory.Clear();
+        lastRecordedPosition = Vector3.zero;
+
+        lineRenderer.positionCount = 0;
     }
 
     public void SendLanding()
@@ -327,6 +392,10 @@ public class ROSControl : MonoBehaviour
         Int32Msg controlMsg = new Int32Msg(0);
         ros.Publish("control", controlMsg);
         Debug.Log("Landing command sent (0)");
+
+        // Stop tracking and send trajectory
+        isTrackingTrajectory = false;
+        SendTrajectoryToROS();
     }
 
     public void ToggleBoundary()

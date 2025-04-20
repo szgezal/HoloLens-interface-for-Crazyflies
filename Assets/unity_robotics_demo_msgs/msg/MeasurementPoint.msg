@@ -1,0 +1,4 @@
+int32 index
+float32 min_distance
+geometry_msgs/Point trajectory_point
+geometry_msgs/Point closest_position
